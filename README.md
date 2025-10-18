@@ -1,4 +1,4 @@
-# VintageStoryAutoUpdate
+# Vintage Story Server Auto Update
 Auto update script for Vintage Story Linux Server
 
 Tested using Ubuntu server 24.04, and a default Vintage Story server setup ref https://wiki.vintagestory.at/Guide:Dedicated_Server#Dedicated_server_on_Linux
