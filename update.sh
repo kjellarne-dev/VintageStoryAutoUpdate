@@ -11,8 +11,8 @@ exec 1>> >(ts '[%Y-%m-%d %H:%M:%S]' > "$logfile") 2>&1
 vintageStoryNewsXML="https://www.vintagestory.at/forums/forum/7-news.xml"
 
 # Define path of default Vintage Story folders
-homePath="/home/vintagestory"
-serverPath="${homePath}/server"
+backupPath="/var/vintagestory/data/Backups/ServerFiles"
+serverPath="/home/vintagestory/server"
 
 ############ END VARIABLES
 ############ FUNCTIONS
@@ -53,7 +53,7 @@ oldVer=${oldVer%".txt"}
 if [[ -z "$oldVer" ]]
 then
   echo "oldVer is empty. Cancelling update process"
-  return
+  exit
 else
   echo "Discovered old version $oldVer"
 fi
@@ -64,7 +64,7 @@ get_newest_version $vintageStoryNewsXML
 if [[ -z "$newVer" ]]
 then
   echo "newVer is empty. Cancelling update process"
-  return
+  exit
 else
   echo "Discovered new version $newVer"
 fi
@@ -73,10 +73,13 @@ fi
 if [ "$(printf '%s\n' "$newVer" "$oldVer" | sort -V | head -n1)" = "$newVer" ]
 then 
   echo "Greater than or equal to $newVer. Do not update"
-  return
+  exit
 else
   echo "Less than $newVer. Downloading update package"
 fi
+
+# Remove old server downloads if they exist
+rm -f /tmp/vs_server_linux-x64_*.*.*.tar.gz
 
 # Download to /tmp and verify that the tarball is extractable before performing system changes
 wget https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz -P /tmp
@@ -85,8 +88,50 @@ then
   echo "tarball extracted successfully. Initiating update process"
 else
   echo "tarball failed to extract. Cancelling update process"
-  return
+  exit
 fi
 
 # Verify that there are no players online
+# Line count with 0 players online = 4. Anything above that indicates that someone is connected
+while [ "$(service VintageStory command "/list clients" | wc -l)" -gt 4 ]
+do
+  echo "Players are connected. Waiting for them to disconnect"
+  sleep 1m
+  i=$((i+1))
+  if [ $i -gt 60 ]
+  then
+    echo "Waited for 1 hour. Cancelling update process"
+    exit
+  fi
+done
+
+# Save game and stop VintageStory server service
+service VintageStory command "/autosavenow"
+service VintageStory stop
+
+# Move old server files to old-servers folder
+mkdir -p $backupPath
+mv $serverPath "$backupPath/$oldVer-$(date +%Y-%m-%d_%H:%M)"
+
+# Download and extract new server files
+mkdir -p $serverPath
+tar xzf /tmp/vs_server_linux-x64_*.*.*.tar.gz -C $serverPath
+rm /tmp/vs_server_linux-x64_*.*.*.tar.gz
+
+# Make server.sh executable, set correct permissions
+chmod +x "$serverPath/server.sh"
+chown vintagestory:vintagestory $serverPath -R
+
+# Start server again
+service VintageStory start
+
 ############ END SCRIPT
+
+
+
+
+## TODO
+
+# Backups
+# Remove backups if more than x exist
+# GUID for logging
