@@ -10,9 +10,14 @@ exec 1>> >(ts '[%Y-%m-%d %H:%M:%S]' > "$logfile") 2>&1
 
 vintageStoryNewsXML="https://www.vintagestory.at/forums/forum/7-news.xml"
 
-# Define path of default Vintage Story folders
+# Define Vintage Story server parameters
 backupPath="/var/vintagestory/data/Backups/ServerFiles"
 serverPath="/home/vintagestory/server"
+serviceName=VintageStory
+userName=vintagestory
+
+# How many minutes should the script attempt to update before cancelling
+minutesToAttemptUpdate=60
 
 ############ END VARIABLES
 ############ FUNCTIONS
@@ -85,9 +90,9 @@ rm -f /tmp/vs_server_linux-x64_*.*.*.tar.gz
 wget https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz -P /tmp
 if [ $(tar xzOf /tmp/vs_server_linux-x64_*.*.*.tar.gz &> /dev/null; echo $?) ]
 then
-  echo "tarball extracted successfully. Initiating update process"
+  echo "Tarball extracted successfully. Initiating update process"
 else
-  echo "tarball failed to extract. Cancelling update process"
+  echo "Tarball failed to extract. Cancelling update process"
   exit
 fi
 
@@ -98,16 +103,16 @@ do
   echo "Players are connected. Waiting for them to disconnect"
   sleep 1m
   i=$((i+1))
-  if [ $i -gt 60 ]
+  if [ $i -gt $minutesToAttemptUpdate ]
   then
-    echo "Waited for 1 hour. Cancelling update process"
+    echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected. Cancelling update process"
     exit
   fi
 done
 
 # Save game and stop VintageStory server service
-service VintageStory command "/autosavenow"
-service VintageStory stop
+service $serviceName command "/autosavenow"
+service $serviceName stop
 
 # Move old server files to old-servers folder
 mkdir -p $backupPath
@@ -120,10 +125,10 @@ rm /tmp/vs_server_linux-x64_*.*.*.tar.gz
 
 # Make server.sh executable, set correct permissions
 chmod +x "$serverPath/server.sh"
-chown vintagestory:vintagestory $serverPath -R
+chown $userName:$userName $serverPath -R
 
 # Start server again
-service VintageStory start
+service $serviceName start
 
 ############ END SCRIPT
 
@@ -135,3 +140,5 @@ service VintageStory start
 # Backups
 # Remove backups if more than x exist
 # GUID for logging
+# Server alerts for updates?
+# External alerts (Discord/Telegram/others)?
