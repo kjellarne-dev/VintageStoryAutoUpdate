@@ -51,84 +51,93 @@ function get_newest_version () {
 ############ END FUNCTIONS
 ############ SCRIPT
 
-# Get the installed version number. Filepath example: "$serverPath/assets/version-1.21.5.txt"
-oldVer=$(ls "$serverPath/assets" | grep "version-")
-oldVer=${oldVer#"version-"}
-oldVer=${oldVer%".txt"}
-if [[ -z "$oldVer" ]]
-then
-  echo "oldVer is empty. Cancelling update process"
-  exit
-else
-  echo "Discovered old version $oldVer"
-fi
-
-# Get the newest released version number
-newVer=""
-get_newest_version $vintageStoryNewsXML
-if [[ -z "$newVer" ]]
-then
-  echo "newVer is empty. Cancelling update process"
-  exit
-else
-  echo "Discovered new version $newVer"
-fi
-
-# Compare old and new version number. Update if "newVer" is more recent than "oldVer"
-if [ "$(printf '%s\n' "$newVer" "$oldVer" | sort -V | head -n1)" = "$newVer" ]
-then 
-  echo "Greater than or equal to $newVer. Do not update"
-  exit
-else
-  echo "Less than $newVer. Downloading update package"
-fi
-
-# Remove old server downloads if they exist
-rm -f /tmp/vs_server_linux-x64_*.*.*.tar.gz
-
-# Download to /tmp and verify that the tarball is extractable before performing system changes
-wget https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz -P /tmp
-if [ $(tar xzOf /tmp/vs_server_linux-x64_*.*.*.tar.gz &> /dev/null; echo $?) ]
-then
-  echo "Tarball extracted successfully. Initiating update process"
-else
-  echo "Tarball failed to extract. Cancelling update process"
-  exit
-fi
-
-# Verify that there are no players online
-# Line count with 0 players online = 4. Anything above that indicates that someone is connected
-while [ "$(service $serviceName command "/list clients" | wc -l)" -gt 4 ]
-do
-  echo "Players are connected. Waiting for them to disconnect"
-  sleep 1m
-  i=$((i+1))
-  if [ $i -gt $minutesToAttemptUpdate ]
-  then
-    echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected. Cancelling update process"
+### Check if the newest available update is newer than the installed version
+    # Get the installed version number. Filepath example: "$serverPath/assets/version-1.21.5.txt"
+    oldVer=$(ls "$serverPath/assets" | grep "version-")
+    oldVer=${oldVer#"version-"}
+    oldVer=${oldVer%".txt"}
+    if [[ -z "$oldVer" ]]
+    then
+    echo "oldVer is empty. Cancelling update process"
     exit
-  fi
-done
+    else
+    echo "Discovered old version $oldVer"
+    fi
 
-# Save game and stop VintageStory server service
-service $serviceName command "/autosavenow"
-service $serviceName stop
+    # Get the newest released version number
+    newVer=""
+    get_newest_version $vintageStoryNewsXML
+    if [[ -z "$newVer" ]]
+    then
+    echo "newVer is empty. Cancelling update process"
+    exit
+    else
+    echo "Discovered new version $newVer"
+    fi
 
-# Move old server files to old-servers folder
-mkdir -p $backupPath
-mv $serverPath "$backupPath/$oldVer-$(date +%Y-%m-%d_%H:%M)"
+    # Compare old and new version number. Update if "newVer" is more recent than "oldVer"
+    if [ "$(printf '%s\n' "$newVer" "$oldVer" | sort -V | head -n1)" = "$newVer" ]
+    then 
+    echo "Greater than or equal to $newVer. Do not update"
+    exit
+    else
+    echo "Less than $newVer. Downloading update package"
+    fi
 
-# Download and extract new server files
-mkdir -p $serverPath
-tar xzf /tmp/vs_server_linux-x64_*.*.*.tar.gz -C $serverPath
-rm /tmp/vs_server_linux-x64_*.*.*.tar.gz
+### Download and verify new update. Perform update pre-checks
+    # Remove old server downloads if they exist
+    rm -f /tmp/vs_server_linux-x64_*.*.*.tar.gz
 
-# Make server.sh executable, set correct permissions
-chmod +x "$serverPath/server.sh"
-chown $userName:$userName $serverPath -R
+    # Download to /tmp and verify that the tarball is extractable before performing system changes
+    wget https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz -P /tmp
+    if [ $(tar xzOf /tmp/vs_server_linux-x64_*.*.*.tar.gz &> /dev/null; echo $?) ]
+    then
+    echo "Tarball extracted successfully. Initiating update process"
+    else
+    echo "Tarball failed to extract. Cancelling update process"
+    exit
+    fi
 
-# Start server again
-service $serviceName start
+    # Verify that there are no players online
+    # Line count with 0 players online = 4. Anything above that indicates that someone is connected
+    while [ "$(service $serviceName command "/list clients" | wc -l)" -gt 4 ]
+    do
+    echo "Players are connected. Waiting for them to disconnect"
+    sleep 1m
+    i=$((i+1))
+    if [ $i -gt $minutesToAttemptUpdate ]
+    then
+        echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected. Cancelling update process"
+        exit
+    fi
+    done
+
+### Install the update
+    # Save game and stop VintageStory server service
+    service $serviceName command "/autosavenow"
+    service $serviceName stop
+
+    # Make a backup of the save files
+    #### TODO
+
+    # Move old server files to backup folder
+    mkdir -p $backupPath
+    mv $serverPath "$backupPath/$oldVer-$(date +%Y-%m-%d_%H:%M)"
+
+    # Remove older server file backups if they exceed x
+    #### TODO
+
+    # Download and extract new server files
+    mkdir -p $serverPath
+    tar xzf /tmp/vs_server_linux-x64_*.*.*.tar.gz -C $serverPath
+    rm /tmp/vs_server_linux-x64_*.*.*.tar.gz
+
+    # Make server.sh executable, set correct permissions
+    chmod +x "$serverPath/server.sh"
+    chown $userName:$userName $serverPath -R
+
+    # Start server again
+    service $serviceName start
 
 ############ END SCRIPT
 
@@ -137,8 +146,8 @@ service $serviceName start
 
 ## TODO
 
-# Backups
-# Remove backups if more than x exist
+# Backup the world save
+# Remove server file backups if more than x exist
 # GUID for logging
 # Server alerts for updates?
 # External alerts (Discord/Telegram/others)?
