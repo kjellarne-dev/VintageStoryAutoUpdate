@@ -9,7 +9,7 @@ Requires adding the VintageStory shell script as a service
 The script checks the Vintage Story news feed for new releases, and initiates an update if the new version number is higher than the one already installed.
 Release Candidates etc are ignored.
 
-It will check and verify that the server is empty before attempting the upgrade.
+It will check that the server is empty before attempting the upgrade.
 
 
 # Adding VintageStory shell script as a service
