@@ -98,7 +98,7 @@ fi
 
 # Verify that there are no players online
 # Line count with 0 players online = 4. Anything above that indicates that someone is connected
-while [ "$(service VintageStory command "/list clients" | wc -l)" -gt 4 ]
+while [ "$(service $serviceName command "/list clients" | wc -l)" -gt 4 ]
 do
   echo "Players are connected. Waiting for them to disconnect"
   sleep 1m
