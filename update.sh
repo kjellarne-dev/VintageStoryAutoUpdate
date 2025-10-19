@@ -1,10 +1,15 @@
 #!/bin/bash
 
+guid=uuidgen
+
 # Output all text to logfile
 logdir="/var/log/vintagestory"
 mkdir -p $logdir
-logfile="${logdir}/UpdateScript.sh.$(date +%Y-%m-%d_%H:%M).log"
+logfile="${logdir}/UpdateScript.sh.$(date +%Y-%m-%dT%H:%M).$guid.log"
 exec 1>> >(ts '[%Y-%m-%d %H:%M:%S]' > "$logfile") 2>&1
+
+echo "Script started execution at $(date +%Y-%m-%dT%H:%M)"
+echo "GUID for this run: $guid"
 
 ############ VARIABLES
 
@@ -58,10 +63,10 @@ function get_newest_version () {
     oldVer=${oldVer%".txt"}
     if [[ -z "$oldVer" ]]
     then
-    echo "oldVer is empty. Cancelling update process"
-    exit
+        echo "oldVer is empty. Cancelling update process"
+        exit
     else
-    echo "Discovered old version $oldVer"
+        echo "Discovered old version $oldVer"
     fi
 
     # Get the newest released version number
@@ -69,19 +74,19 @@ function get_newest_version () {
     get_newest_version $vintageStoryNewsXML
     if [[ -z "$newVer" ]]
     then
-    echo "newVer is empty. Cancelling update process"
-    exit
+        echo "newVer is empty. Cancelling update process"
+        exit
     else
-    echo "Discovered new version $newVer"
+        echo "Discovered new version $newVer"
     fi
 
     # Compare old and new version number. Update if "newVer" is more recent than "oldVer"
     if [ "$(printf '%s\n' "$newVer" "$oldVer" | sort -V | head -n1)" = "$newVer" ]
     then 
-    echo "Greater than or equal to $newVer. Do not update"
-    exit
+        echo "Greater than or equal to $newVer. Do not update"
+        exit
     else
-    echo "Less than $newVer. Downloading update package"
+        echo "Less than $newVer. Downloading update package"
     fi
 
 ### Download and verify new update. Perform update pre-checks
@@ -92,24 +97,24 @@ function get_newest_version () {
     wget https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz -P /tmp
     if [ $(tar xzOf /tmp/vs_server_linux-x64_*.*.*.tar.gz &> /dev/null; echo $?) ]
     then
-    echo "Tarball extracted successfully. Initiating update process"
+        echo "Tarball extracted successfully. Initiating update process"
     else
-    echo "Tarball failed to extract. Cancelling update process"
-    exit
+        echo "Tarball failed to extract. Cancelling update process"
+        exit
     fi
 
     # Verify that there are no players online
     # Line count with 0 players online = 4. Anything above that indicates that someone is connected
     while [ "$(service $serviceName command "/list clients" | wc -l)" -gt 4 ]
     do
-    echo "Players are connected. Waiting for them to disconnect"
-    sleep 1m
-    i=$((i+1))
-    if [ $i -gt $minutesToAttemptUpdate ]
-    then
-        echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected. Cancelling update process"
-        exit
-    fi
+        echo "Players are connected. Waiting for them to disconnect"
+        sleep 1m
+        i=$((i+1))
+        if [ $i -gt $minutesToAttemptUpdate ]
+        then
+            echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected. Cancelling update process"
+            exit
+        fi
     done
 
 ### Install the update
@@ -122,7 +127,7 @@ function get_newest_version () {
 
     # Move old server files to backup folder
     mkdir -p $backupPath
-    mv $serverPath "$backupPath/$oldVer-$(date +%Y-%m-%d_%H:%M)"
+    mv $serverPath "$backupPath/$oldVer-$(date +%Y-%m-%d)-$guid"
 
     # Remove older server file backups if they exceed x
     #### TODO
@@ -148,6 +153,5 @@ function get_newest_version () {
 
 # Backup the world save
 # Remove server file backups if more than x exist
-# GUID for logging
 # Server alerts for updates?
 # External alerts (Discord/Telegram/others)?
