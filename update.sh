@@ -42,8 +42,8 @@ function get_newest_version () {
     | sed -E 's|^.*<title>(.*)</title>.*$|\1|' > "${TMP}.titles"
 
   # 2. isolate stable version strings (skip rc/alpha/beta/pre/dev)
-  grep -oiE '[0-9]+\.[0-9]+\.[0-9]+' "${TMP}.titles" \
-    | grep -vEi '(rc|alpha|beta|pre|dev)' > "${TMP}.versions"
+  grep -vEi '(rc|alpha|beta|pre|dev)' "${TMP}.titles" \
+    | grep -oiE '[0-9]+\.[0-9]+\.[0-9]+' > "${TMP}.versions"
 
   # 3. highest version
   newVer=$(sort -V "${TMP}.versions" | tail -n 1)
