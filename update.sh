@@ -62,10 +62,10 @@ function get_newest_version () {
     oldVer=${oldVer%".txt"}
     if [[ -z "$oldVer" ]]
     then
-        echo "oldVer is empty. Cancelling update process"
+        echo "oldVer variable is empty. Cancelling update process"
         exit
     else
-        echo "Discovered old version $oldVer"
+        echo "Installed version: $oldVer"
     fi
 
     # Get the newest released version number
@@ -73,19 +73,20 @@ function get_newest_version () {
     get_newest_version $vintageStoryNewsXML
     if [[ -z "$newVer" ]]
     then
-        echo "newVer is empty. Cancelling update process"
+        echo "newVer variable is empty. Cancelling update process"
         exit
     else
-        echo "Discovered new version $newVer"
+        echo "Newest available version: $newVer"
     fi
 
     # Compare old and new version number. Update if "newVer" is more recent than "oldVer"
     if [ "$(printf '%s\n' "$newVer" "$oldVer" | sort -V | head -n1)" = "$newVer" ]
     then 
-        echo "Greater than or equal to $newVer. Do not update"
+        echo "The installed version ($oldVer) is greater than or equal to the most recent stable version available online ($newVer)"
+        echo "Stopping update process"
         exit
     else
-        echo "Less than $newVer. Downloading update package"
+        echo "The installed version ($oldVer) is lower than the most recent stable version available online ($newVer)"
     fi
 
 ### Download and verify new update. Perform update pre-checks
@@ -93,6 +94,7 @@ function get_newest_version () {
     rm -f /tmp/vs_server_linux-x64_*.*.*.tar.gz
 
     # Download to /tmp and verify that the tarball is extractable before performing system changes
+    echo "Downloading the update package from https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz"
     wget https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_$newVer.tar.gz -P /tmp
     if [ $(tar xzOf /tmp/vs_server_linux-x64_*.*.*.tar.gz &> /dev/null; echo $?) ]
     then
@@ -111,7 +113,8 @@ function get_newest_version () {
         i=$((i+1))
         if [ $i -gt $minutesToAttemptUpdate ]
         then
-            echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected. Cancelling update process"
+            echo "Waited for $minutesToAttemptUpdate minutes. Users are still connected"
+            echo "Cancelling the update process"
             exit
         fi
     done
@@ -154,3 +157,5 @@ function get_newest_version () {
 # Remove server file backups if more than x exist
 # Server alerts for updates?
 # External alerts (Discord/Telegram/others)?
+# Override parameter / manual update
+# Force install update
