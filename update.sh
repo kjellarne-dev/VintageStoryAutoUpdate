@@ -1,10 +1,9 @@
 #!/bin/bash
 
-guid=uuidgen
-
 # Output all text to logfile
 logdir="/var/log/vintagestory"
 mkdir -p $logdir
+guid=uuidgen
 logfile="${logdir}/UpdateScript.sh.$(date +%Y-%m-%dT%H:%M).$guid.log"
 exec 1>> >(ts '[%Y-%m-%d %H:%M:%S]' > "$logfile") 2>&1
 
