@@ -5,7 +5,7 @@ logdir="/var/log/vintagestory"
 mkdir -p $logdir
 guid=uuidgen
 logfile="${logdir}/UpdateScript.sh.$(date +%Y-%m-%dT%H:%M).$guid.log"
-exec 1>> >(ts '[%Y-%m-%d %H:%M:%S]' > "$logfile") 2>&1
+exec 1>> >(ts '[%Y-%m-%d %.T]' > "$logfile") 2>&1
 
 echo "Script started execution at $(date +%Y-%m-%dT%H:%M)"
 echo "GUID for this run: $guid"
